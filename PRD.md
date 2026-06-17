@@ -39,7 +39,7 @@ A single, reliable place for our troop and pack to manage **people, advancement,
 |---|---|---|
 | Programs | Scouts BSA + Cub Scouts | Two advancement models; shared person/household core |
 | Audience | Single troop (ours) | No multi-tenancy or billing; simpler auth; one config |
-| Platforms | Web + iOS + Android | Responsive web + cross-platform mobile (see §10) |
+| Platforms | Web + iOS + Android | Installable **PWA** (web) ships first + cross-platform native mobile (see §10, §5.16) |
 | BSA sync | Critical | But **file-based and one-way** — no public API exists |
 
 ---
@@ -103,6 +103,7 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 14. **Reminders & Notifications engine** (configurable, cross-cutting)
 15. **Unit settings & configuration** (configurable durations & rules)
 16. Photos & Media (galleries with consent)
+17. **Progressive Web App (PWA)** — installable, offline-capable web app
 
 ---
 
@@ -253,6 +254,17 @@ Centralized, admin-editable configuration so durations and rules are **data, not
 - **FR-PH-2 (P0)** **Per-youth photo-consent flag** enforced: Scouts whose guardians have not consented are excluded from shared galleries/exports (§9, COPPA).
 - **FR-PH-3 (P1)** Access controls (unit-only, committee-only) and download/share controls.
 
+### 5.16 Progressive Web App (PWA)
+The responsive web app ships as an **installable PWA** — a no-app-store path that delivers most of the phone experience on day one (and works on desktop). It lets us **launch on web + PWA before** the native iOS/Android apps clear store review, and stays a first-class target afterward.
+
+- **FR-PWA-1 (P0)** **Web App Manifest** (name, icons, theme/background colors, standalone display) so users can **"Add to Home Screen"** on Android/iOS and install on desktop; launches full-screen without browser chrome.
+- **FR-PWA-2 (P0)** **Service worker** providing an app shell + offline cache: roster, calendar, a Scout's advancement, and trip safety rosters remain **viewable offline** (mirrors NFR-2). Cache-busting/versioned updates with a "new version available" prompt.
+- **FR-PWA-3 (P0)** **Installability & served over HTTPS** with a passing Lighthouse PWA audit; works on current Chrome/Edge/Firefox/Safari.
+- **FR-PWA-4 (P1)** **Web Push notifications** for the reminders engine (§5.13) where the platform supports it (Android/desktop broadly; **iOS Safari ≥16.4 only when installed to Home Screen**). Falls back to email/SMS and to native push in the mobile apps where web push is unavailable.
+- **FR-PWA-5 (P1)** **Background sync / queued writes**: actions taken offline (e.g., attendance at a campout) are queued in the service worker and synced on reconnect — parity with the native offline-write behavior (NFR-2).
+- **FR-PWA-6 (P2)** Optional niceties: share-target, file-upload from camera for photos/medical docs, periodic background refresh of the newsletter/digest.
+- **Constraint:** Sensitive data (medical/PII) is **not** persisted in offline caches beyond what a logged-in session needs; caches are cleared on logout, and the service worker honors the same role-based access as the API.
+
 ---
 
 ## 6. Integration architecture (Scouting America)
@@ -345,11 +357,11 @@ These are **architectural invariants**:
 > Architecture is a recommendation; final choices owned by engineering.
 
 - **Single backend API** (the source of truth) — e.g., a REST/GraphQL service with a relational DB (PostgreSQL). Guarantees web/mobile parity (NFR-1).
-- **Web**: responsive SPA (e.g., React) — also installable as a **PWA** for admin-heavy tasks.
-- **Mobile**: **one cross-platform codebase** (React Native or Flutter) shipping iOS + Android — fastest path to all three platforms with a consistent, reliable UX; native push + offline cache.
+- **Web + PWA**: responsive SPA (e.g., React) built as an **installable, offline-capable PWA** (manifest + service worker; e.g., Vite PWA / Workbox) — §5.16. Ships first and serves both desktop admin work and a phone experience with no app-store dependency.
+- **Mobile**: **one cross-platform codebase** (React Native or Flutter) shipping iOS + Android, sharing the same backend as the PWA — native push + offline cache for the best phone UX. The PWA covers phones in the interim and as a fallback.
 - **Auth**: email/password + magic link; SSO optional; MFA for admin/treasurer roles.
 - **Payments**: Stripe (hosted elements; minimal PCI scope).
-- **Messaging infra**: transactional email provider; SMS gateway with opt-in/STOP; push via APNs/FCM.
+- **Messaging infra**: transactional email provider; SMS gateway with opt-in/STOP; push via **Web Push (PWA)** and **APNs/FCM** (native).
 - **Integration layer**: file import/export adapters; optional unsupported-connector isolated behind a flag.
 - **Catalogs/roles as data**: seeded & updatable via admin tooling without redeploy.
 - **Hosting**: single-unit can run on a small managed stack; nightly backups.
@@ -378,8 +390,8 @@ These are **architectural invariants**:
 **Phase 0 — Foundations (P0 infra)**
 Auth, single-unit setup, Person/Household model, role-based permissions, my.scouting roster import, full backup/export.
 
-**Phase 1 — MVP (replace TroopTrack core)**
-Advancement (Troop + Pack) with bulk entry & approval; **validated Scoutbook Plus export**; Calendar + RSVP + ICS sync; Announcements + email + SMS; Documents incl. medical + permission slips; compliance dashboard (SYT/medical). Mobile app with push + offline read.
+**Phase 1 — MVP (replace TroopTrack core), shipped as a PWA first**
+Delivered on the **installable PWA** (manifest + service-worker offline shell + web push) so we launch without waiting on app-store review: Advancement (Troop + Pack) with bulk entry & approval; **validated Scoutbook Plus export**; Calendar + RSVP + ICS sync; **registration-renewal tracking + the reminders engine**; Announcements + email + SMS; Documents incl. medical + permission slips; compliance dashboard (SYT/medical/registration). Native iOS/Android apps (push + offline read) follow on the same backend.
 
 **Phase 2 — Money & engagement**
 Scout accounts, dues, **Stripe online payments**, event-linked payments, auto-newsletter, attendance→activity-log automation, board-of-review prep.
