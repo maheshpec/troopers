@@ -4,7 +4,7 @@
 
 Single-unit app (one troop + pack, ~50–150 families / 300–500 users). **Not**
 multi-tenant. Run by volunteers, so **low maintenance matters as much as low cost.**
-Target: under ~$25–30/month all-in.
+Target: **as close to $0/month as possible.**
 
 > Pricing below is mid-2026 and gathered largely from search snapshots (many
 > vendor pages block automated fetch). Re-confirm the flagged items before
@@ -14,11 +14,17 @@ Target: under ~$25–30/month all-in.
 
 ## TL;DR recommendation
 
-**Start free, then flip one switch at launch.**
+**Run it for $0. Pay only if and when you actually outgrow a free limit.**
 
-- **Pilot:** Stack A — **~$0/mo** (all free tiers).
-- **Production:** Stack B — **~$25/mo** (Supabase Pro), the recommended target.
-- **Self-host:** Stack C — **~$6–12/mo**, only if a committed technical volunteer wants to run a server.
+- **★ Default (pilot *and* production):** Stack A — **~$0/mo**, all free tiers, with a free keep-alive ping + nightly backup (see §"Running Supabase Free at $0"). At 150 families you may never need to leave this.
+- **Upgrade only if needed:** Stack B — **~$25/mo** (Supabase Pro). Buys *only* "no pausing" + managed daily backups — both of which Stack A already solves for free. Move here only if you hit the 500 MB DB limit or want a vendor SLA.
+- **Self-host alternative:** Stack C — **~$5–12/mo**, only if a committed technical volunteer wants no vendor limits and will own server upkeep long-term.
+
+**Why Free is genuinely enough at our scale:** a troop's relational data (members,
+events, advancement, transactions) is text — years of it fit in **well under the
+500 MB free Postgres limit**. The large files (photos, documents) live in
+**Cloudflare R2** (10 GB free), *not* in Supabase, so Supabase's 1 GB storage cap is
+irrelevant. Free covers **50K monthly active users**; we have ~300–500.
 
 Core picks, by need:
 
@@ -35,24 +41,26 @@ Core picks, by need:
 
 ## Recommended stacks
 
-### Stack A — Rock-bottom free tier (~$0–5/mo) — *for the pilot*
+### Stack A — All free tier (~$0/mo) — ★ RECOMMENDED (pilot *and* production)
 | Component | Choice | $/mo |
 |---|---|---|
-| Backend + Postgres + Auth/RBAC | Supabase **Free** (50K MAU) | $0 |
+| Backend + Postgres + Auth/RBAC | Supabase **Free** (50K MAU, 500 MB DB) | $0 |
+| Keep-alive + nightly backup | GitHub Actions cron (see below) | $0 |
 | Object/image storage | Cloudflare R2 (10 GB free) | $0–1 |
 | Email (bulk + transactional) | Brevo **Free** (~9,000/mo) | $0 |
 | Web / PWA | Cloudflare Pages Free | $0 |
 | Payments | Stripe | per-txn |
 | Mobile builds | GitHub Actions / EAS free | $0 |
-| **Total** | | **~$0–5** |
+| **Total** | | **~$0** |
 
-**One real risk:** Supabase free projects **pause after 7 days idle**. A weekly
-cron ping avoids it — or just move to Stack B at launch.
+The two real free-tier downsides — **pausing after 7 days idle** and **no managed
+daily backups** — are both eliminated for $0 with free GitHub Actions crons. See
+**"Running Supabase Free at $0"** below.
 
-### Stack B — Managed, low-maintenance (~$25/mo) — ★ RECOMMENDED for production
+### Stack B — Managed upgrade (~$25/mo) — *only if you outgrow Free*
 | Component | Choice | $/mo |
 |---|---|---|
-| Postgres + Auth/RBAC + 100 GB storage + daily backups, **no pausing** | Supabase **Pro** (100K MAU) | $25 |
+| Postgres + Auth/RBAC + 100 GB storage + daily backups, **no pausing** | Supabase **Pro** (100K MAU, 8 GB DB) | $25 |
 | Overflow storage (if >100 GB) | Cloudflare R2 | ~$0–1 |
 | Email | Brevo Free *(or Postmark $15 if a lost medical-form email is unacceptable)* | $0 |
 | Web / PWA | Cloudflare Pages Free | $0 |
@@ -60,8 +68,10 @@ cron ping avoids it — or just move to Stack B at launch.
 | Mobile builds | EAS free / GitHub Actions | $0 |
 | **Total** | | **~$25–26** |
 
-Zero server ops, managed backups, single dashboard a non-developer can navigate.
-Best fit for "volunteer-run, must just work."
+Buys *only* no-pausing + managed daily backups + a higher DB ceiling (8 GB vs 500 MB)
++ a vendor SLA. Stack A already covers the first two for free, so move here **only**
+if you approach the 500 MB DB limit or want a paid support relationship. Identical
+code — it's a one-click dashboard switch, no migration.
 
 ### Stack C — Cheap self-hosted VPS (~$6–12/mo) — *only with a committed ops volunteer*
 | Component | Choice | $/mo |
@@ -79,6 +89,72 @@ Cheapest ongoing, full control, no lock-in — but **you own** OS patching, Post
 backups, TLS, uptime, and a single box = no failover. Poor fit if the maintainer
 leaves. Hetzner's 20 TB is EU-only; for US users add a CDN or use Linode/DO 4 GB
 (~$24/mo).
+
+---
+
+## Running Supabase Free at $0 (eliminating the two downsides)
+
+The only reasons to pay for Pro are **pausing** and **managed backups**. Both are
+handled by free, scheduled **GitHub Actions** crons — no servers, no cost.
+
+**1. Keep-alive (prevents the 7-day idle pause).** A daily workflow that runs one
+trivial query keeps the project marked active:
+
+```yaml
+# .github/workflows/keepalive.yml
+name: Supabase keep-alive
+on:
+  schedule: [{ cron: "0 12 * * *" }]   # daily, noon UTC
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Touch the DB
+        run: |
+          curl -fsS "$SUPABASE_URL/rest/v1/health?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" >/dev/null
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+```
+
+*(`health` = any tiny readable table/view. Alternatives: cron-job.org or a Cloudflare
+Worker Cron Trigger — all free.)*
+
+**2. Nightly backup you own (replaces managed daily backups).** Dump the DB and push
+it to R2:
+
+```yaml
+# .github/workflows/backup.yml
+name: Nightly DB backup
+on:
+  schedule: [{ cron: "0 8 * * *" }]    # daily, after low-traffic hours
+  workflow_dispatch:
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          pg_dump "$DATABASE_URL" --no-owner --format=custom \
+            -f "troopers-$(date +%F).dump"
+      - run: |
+          aws s3 cp "troopers-$(date +%F).dump" \
+            "s3://$R2_BUCKET/backups/" \
+            --endpoint-url "$R2_ENDPOINT"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      R2_BUCKET: ${{ vars.R2_BUCKET }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+```
+
+This gives you **versioned off-platform backups in R2** (a feature Pro's in-platform
+backups don't even provide), plus a tested restore path = no lock-in. Add a retention
+step (e.g., keep 30 dailies) if desired. **Net result: Stack A is a true $0/mo
+production setup**, and you only revisit Pro if the 500 MB DB ceiling ever gets close.
 
 ---
 
@@ -141,7 +217,8 @@ volume, and troop dues/fees/popcorn aren't donations.
 ## How this maps to the PRD
 
 Satisfies PRD §10 (platform/technical approach) and §7 NFRs: single backend = no
-web/mobile data divergence (NFR-1); managed daily backups (NFR-4); encryption at
-rest + RLS least-privilege (NFR-5); one-click export / no lock-in (NFR-10). Resolves
-open question **OQ-3 (hosting & sustainability)** in favor of **Stack B** to avoid
-repeating TroopTrack's lean-team reliability problems.
+web/mobile data divergence (NFR-1); nightly off-platform backups to R2 (NFR-4);
+encryption at rest + RLS least-privilege (NFR-5); one-click/dump export + no lock-in
+(NFR-10). Resolves open question **OQ-3 (hosting & sustainability)** in favor of
+**Stack A (~$0/mo)** — free managed BaaS plus free GitHub Actions crons for
+keep-alive and backups — upgrading to Stack B only if the DB ceiling is approached.
