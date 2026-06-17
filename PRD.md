@@ -65,6 +65,7 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 - **Advancement export = pipe-delimited (`|`) text file**, uploaded manually into Scoutbook Plus. Format must be validated directly with BSA before launch.
 - **Roster/training inbound = admin-downloaded exports** from my.scouting.org (not a live feed).
 - **Safeguarding Youth Training (SYT)** replaced YPT (May 2025); now **annual** expiry. App must track currency.
+- **Individual, anniversary-based registration renewal** (since 2024): unit renewal is separated from member renewal; each member renews on their own join-anniversary (national notifies starting 60 days out). Members lapse on different dates — the app must track and remind per-member (see §5.12, §5.13).
 - **COPPA** applies (Cub Scouts are under 13); 2025 amendments require written security + data-retention/deletion policies, data minimization, and verifiable parental consent. Full-compliance deadline April 22, 2026.
 
 ---
@@ -98,6 +99,10 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 10. Equipment / Quartermaster
 11. Reporting & Dashboards (incl. compliance: SYT, medical)
 12. Mobile apps (iOS/Android) with offline tolerance & push
+13. **Membership & Registration lifecycle** (join/renewal/recharter, anniversary-based)
+14. **Reminders & Notifications engine** (configurable, cross-cutting)
+15. **Unit settings & configuration** (configurable durations & rules)
+16. Photos & Media (galleries with consent)
 
 ---
 
@@ -127,9 +132,13 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 - **FR-A-3 (P0)** **Bulk entry**: mark a requirement complete for many Scouts at once (e.g., from an event/campout).
 - **FR-A-4 (P0)** Advancement approval workflow: leader review → approve → "ready to purchase/award" state → awarded (date).
 - **FR-A-5 (P0)** **Maintained requirement catalogs** for both programs, versioned with effective dates (program changes happen — e.g., the 2024 Cub updates). Catalog updates shipped without app redeploy.
-- **FR-A-6 (P1)** Board-of-review / Scoutmaster-conference prep view per Scout.
+- **FR-A-6 (P1)** Board-of-review / Scoutmaster-conference prep view per Scout, with **scheduling** of conferences/BORs.
 - **FR-A-7 (P1)** Award-ceremony / purchase-list management (what to buy at the Scout Shop).
 - **FR-A-8 (P0)** Full advancement history & audit (who entered/approved, when).
+- **FR-A-9 (P1)** **Position of Responsibility (PoR) & time-in-rank tracking**: many ranks require months serving in a leadership position and "active participation" — track tenure against requirements and flag when a Scout becomes eligible.
+- **FR-A-10 (P1)** **Merit Badge Counselor registry**: counselor list, badges each is approved for, contact info; **blue-card workflow** (assign → in-progress → complete); YP-safe counselor↔Scout contact (§9).
+- **FR-A-11 (P1)** **Eagle pipeline**: Life→Eagle tracking with the **age-18 deadline countdown**, Eagle-required badge checklist, Eagle service-project status, references, and rank-deadline alerts (ties to Reminders §5.14).
+- **FR-A-12 (P2)** Other awards & recognitions: religious emblems, NOVA/Supernova STEM, special awards, knots, OA milestones.
 
 ### 5.4 Official Scouting America sync (P0 — the strategic differentiator)
 - **FR-S-1 (P0)** **Export advancement** to a **pipe-delimited (`|`) Scoutbook Plus import file**, schema-validated against the current BSA spec, with a pre-export validation report (missing dates, malformed records flagged before download).
@@ -150,6 +159,10 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 - **FR-E-7 (P1)** Event-linked payments (pay the campout fee at RSVP — ties to §5.7).
 - **FR-E-8 (P1)** Carpool/driver coordination using adult driver info.
 - **FR-E-9 (P1)** Recurring events (weekly meetings).
+- **FR-E-10 (P1)** **Volunteer / signup slots** per event (drivers, chaperones, snack/meal, gear, duty roster) with capacity limits — replaces ad-hoc SignUpGenius use.
+- **FR-E-11 (P1)** **Event check-in / headcount & two-deep verification**: who is actually on the trip (safety roster), with registered-adult count surfaced.
+- **FR-E-12 (P1)** **Trip/activity roster pack**: printable/offline roster with emergency contacts, allergies/meds, and medical-on-file status for the leader in charge.
+- **FR-E-13 (P2)** Annual program planning calendar (plan the year; meeting agendas / plan-of-the-week).
 
 ### 5.6 Communication (Youth-Protection-safe by design — §9)
 - **FR-C-1 (P0)** **Announcements** feed (unit-wide and group-targeted: patrol, den, committee).
@@ -168,8 +181,11 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 - **FR-M-4 (P0)** Auto-bill accounts for paid events on RSVP; balance reflected in newsletter.
 - **FR-M-5 (P1)** **Fund transfers** between accounts (paired debit/credit).
 - **FR-M-6 (P1)** **Reimbursement requests** (leader submits receipt → treasurer approves → pays).
-- **FR-M-7 (P1)** Fundraiser tracking (credit proceeds to Scout accounts).
+- **FR-M-7 (P1)** **Fundraising campaigns** (popcorn, camp cards, wreaths): track per-Scout sales and **credit a share of proceeds to that Scout's account** ("ideal year of Scouting"); campaign totals and goals.
 - **FR-M-8 (P0)** Treasurer reports: balances, aging/unpaid dues, transaction export (CSV).
+- **FR-M-9 (P1)** **Record offline payments** (cash/check) and **refunds**; per-household **account statements** parents can view/download.
+- **FR-M-10 (P2)** Unit annual **budget** vs. actuals (income/expense categories).
+- **FR-M-11 (P1)** **Registration-fee collection**: bill the annual national membership fee at renewal time and reconcile (ties to §5.12).
 - **Constraint:** PCI scope minimized by using Stripe-hosted payment elements; the app never stores card data.
 
 ### 5.8 Activity Logs
@@ -194,6 +210,48 @@ Roster & households; advancement (ranks, merit badges, awards, per-requirement +
 - **FR-RP-3 (P0)** Roster, attendance, participation, money, activity-log reports; CSV export.
 - **FR-RP-4 (P0)** **Full data backup/export** (unit owns its data) — human-readable + machine-readable.
 - **FR-RP-5 (P1)** Configurable/saved report views.
+- **FR-RP-6 (P1)** **Renewal/recharter readiness report**: who is due/overdue to renew, training currency, and registered-adult counts — one screen to drive re-charter (ties to §5.12, §5.13).
+- **FR-RP-7 (P2)** Journey to Excellence (JTE) metric tracking.
+
+### 5.12 Membership & Registration lifecycle (P0 — the gap you flagged)
+> As of 2024, Scouting America **separated unit renewal from individual membership renewal**. Each member now renews on **their own join-anniversary date** (national emails a renewal link starting **60 days before**), *not* a single synchronized unit recharter. Members who joined before Aug 1, 2023 keep a Dec 31 anniversary. So every Scout and adult can lapse on a **different day** — tracking this is now a core job, not a once-a-year task.
+
+- **FR-MR-1 (P0)** Store each member's **registration anniversary/expiration date**, registration status (registered / expiring / lapsed / dropped), and membership term; imported from the council roster (§5.4) and editable.
+- **FR-MR-2 (P0)** **Registration renewal tracking & reminders**: surface who is upcoming/overdue at **configurable lead times** (default 60/30/14/0 days, per §5.13/§5.14); drive automatic reminders to the member's household and the Membership Chair.
+- **FR-MR-3 (P0)** **Unit charter renewal** (the separate unit-level annual process): track the unit charter expiration, a renewal **checklist** (registered adults trained, youth/adult counts, fees), and readiness status — distinct from individual renewals.
+- **FR-MR-4 (P1)** **Join / prospect pipeline**: capture interested youth/leads → applied → registered; new-member onboarding checklist (application, fee, YPT/SYT for adults).
+- **FR-MR-5 (P1)** **Lifecycle transitions**: Cub den progression (Lion→…→Arrow of Light), **Webelos/AOL crossover into a Troop**, transfers in/out, dual registration, and **graduation/alumni** status.
+- **FR-MR-6 (P1)** **Membership fee at renewal**: show the current national fee, optionally collect it (§5.7 FR-M-11), and mark paid.
+- **FR-MR-7 (P0)** **Registration history & audit** per member (terms, dates, status changes).
+
+### 5.13 Reminders & Notifications engine (P0 — the gap you flagged)
+A single, **configurable, cross-cutting** subsystem (not one-off reminders bolted onto each feature). Every time-bound thing in the app can emit reminders through one consistent engine, delivered via push / email / SMS / in-app per the recipient's preferences and YP rules.
+
+- **FR-N-1 (P0)** **Reminder rule types** out of the box: registration renewal (§5.12), **SYT/training expiry**, **medical-form (AHMR) expiry**, unpaid dues / overdue balance, event RSVP deadline, event upcoming, payment due, **rank/Eagle age-18 deadline**, stalled advancement, permission-slip not signed.
+- **FR-N-2 (P0)** **Configurable lead times & cadence per rule**: e.g., renewal at 60/30/14/0 days; medical at 45/14 days; configurable repeat interval and quiet hours. Sensible defaults shipped; admins adjust without code.
+- **FR-N-3 (P0)** **Configurable recipients & escalation** per rule: notify the household, the member, and/or a responsible role (Membership Chair, Treasurer, Advancement Chair); optional escalation to a leader if unacknowledged.
+- **FR-N-4 (P0)** **Multi-channel delivery** (push, email, SMS, in-app) honoring per-user channel preferences, opt-outs, and YP guardrails (§9 — no 1-on-1 adult↔youth).
+- **FR-N-5 (P1)** **Acknowledgement / "action required" reminders**: recipient can mark done (e.g., "renewed," "medical uploaded"); reminders stop automatically when the underlying condition clears.
+- **FR-N-6 (P1)** **Digest mode**: roll multiple reminders into the periodic newsletter/digest instead of separate messages.
+- **FR-N-7 (P1)** **Admin reminder console**: see scheduled/sent reminders, snooze, resend, or trigger manually.
+- **FR-N-8 (P0)** Reminders fire **server-side on schedule** (works even if no one opens the app) — implemented on the chosen hosting's scheduled-function/cron (see HOSTING.md).
+
+### 5.14 Unit settings & configuration (P0 — "configurable durations etc.")
+Centralized, admin-editable configuration so durations and rules are **data, not code** (NFR-8). All of the following are configurable without a redeploy:
+
+- **FR-CFG-1 (P0)** **Configurable validity durations**: medical-form validity (default 12 mo), SYT/training validity (default 12 mo, annual), registration term, dues period/cycle, RSVP window default, payment-due window.
+- **FR-CFG-2 (P0)** **Configurable reminder lead times & cadences** for every rule in §5.13.
+- **FR-CFG-3 (P0)** **Unit profile & program year**: unit number(s), council/district, charter org, program-year start, meeting schedule, fiscal year, time zone.
+- **FR-CFG-4 (P0)** **Roles & permission-set configuration** (ties to §5.2): which positions exist and what each can do.
+- **FR-CFG-5 (P1)** **Dues amounts & fee schedule**, default event fees, late-fee rules.
+- **FR-CFG-6 (P1)** **Communication defaults**: newsletter cadence, sender identity, channel defaults, quiet hours.
+- **FR-CFG-7 (P1)** **Feature toggles** per unit (e.g., enable/disable fundraising, equipment, SMS).
+- **FR-CFG-8 (P0)** All settings changes are **audit-logged**.
+
+### 5.15 Photos & Media
+- **FR-PH-1 (P1)** **Event photo galleries** (uploaded to object storage — see HOSTING.md), organized by event/album, with **tagging**.
+- **FR-PH-2 (P0)** **Per-youth photo-consent flag** enforced: Scouts whose guardians have not consented are excluded from shared galleries/exports (§9, COPPA).
+- **FR-PH-3 (P1)** Access controls (unit-only, committee-only) and download/share controls.
 
 ---
 
@@ -256,6 +314,14 @@ Core entities and key relationships:
 - **Message/Announcement** → audience, YP-copy rules, retention
 - **Document** → type (medical/form/file), access scope, expiry
 - **Equipment** → CheckoutRecord
+- **Registration** → Person × term (anniversary/expiration date, status, fee) — drives renewal reminders
+- **UnitCharter** → renewal date, checklist, status
+- **ReminderRule** (config: type, lead times, recipients, channels) → generates **ReminderInstance**s
+- **UnitSettings** → configurable durations, fee schedule, program year, feature toggles
+- **MeritBadgeCounselor** → approved badges; **BlueCard** → Scout × badge × counselor × status
+- **SignupSlot** → Event × role × capacity → Signups
+- **FundraisingCampaign** → per-Scout Sales → MoneyAccount credits
+- **PhotoAlbum** → Photos (tags, consent-filtered)
 
 ---
 
