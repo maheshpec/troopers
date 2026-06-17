@@ -339,8 +339,8 @@ Reimbursements, fund transfers, fundraisers, equipment/quartermaster, carpool, c
 |---|---|---|---|
 | OQ-1 | **Confirm current Scoutbook Plus pipe-delimited column spec** with BSA before building export | Eng/Advancement Chair | Format changed legacy→Plus; gate FR-S-1 on this |
 | OQ-2 | Verifiable parental consent method (text-plus vs. signed form vs. ID) | Committee | COPPA full-compliance deadline 2026-04-22 |
-| OQ-3 | Hosting & who maintains it long-term (single-unit sustainability) | Stakeholder | Avoid repeating TroopTrack's lean-team failure mode |
-| OQ-4 | SMS gateway choice & cost model | Eng | Per-message cost; opt-in management |
+| OQ-3 | Hosting & who maintains it long-term (single-unit sustainability) | Stakeholder | **Addressed in [HOSTING.md](./HOSTING.md)** — recommend Stack B (Supabase Pro, ~$25/mo) for low-maintenance, managed backups |
+| OQ-4 | SMS gateway choice & cost model | Eng | Per-message cost; opt-in management. See [HOSTING.md](./HOSTING.md) for email/payments choices |
 | OQ-5 | Extent of offline *write* support at launch (attendance at campouts) | Eng/Product | Phase 1 read-only vs. Phase 3 full write-sync |
 | OQ-6 | Data-retention periods for youth PII & medical | Committee/Legal | Required written policy (COPPA 2025) |
 | OQ-7 | Will we attempt the optional unofficial connector at all? | Stakeholder | ToS & breakage risk; recommend deferring to P2/no |

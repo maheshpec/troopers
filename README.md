@@ -5,7 +5,8 @@ built to replace TroopTrack with a reliable phone experience, role-based
 administration, and a frictionless, validated path to sync advancement into
 Scouting America's official systems.
 
-See **[PRD.md](./PRD.md)** for the full product requirements document.
+See **[PRD.md](./PRD.md)** for the full product requirements document, and
+**[HOSTING.md](./HOSTING.md)** for the hosting & infrastructure plan (cost-optimized).
 
 ## At a glance
 - **Programs:** Scouts BSA (Troop) + Cub Scouts (Pack)
