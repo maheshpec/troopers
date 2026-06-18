@@ -11,7 +11,7 @@ accessibility — these are *implementation* deferrals, not corner-cutting.
 | # | Shortcut (where) | Why deferred | Upgrade path | Priority |
 |---|---|---|---|---|
 | ~~D1~~ | ~~In-memory repositories~~ | **DONE** | Postgres repository factory wired (`core/pgRepository.ts`); in-memory remains the no-DB fallback | ✅ |
-| D2 | Static dev-token auth (`src/auth.ts`) | Real IdP needs accounts | Verify JWT (Supabase Auth / Better Auth) via `jose`; load positions → permission scopes; add MFA for admin/treasurer | **High** |
+| D2 | ~~Static dev-token auth~~ → **JWT done**; RS256/JWKS + MFA remain | HS256 JWT verification built & tested (`src/auth.ts`, `jose`); RS256/JWKS rotation + MFA need a live IdP | Medium |
 | D3 | Payments return 501 (`domain/money.ts`) | No Stripe credentials | Stripe PaymentIntent + signed webhook → credit a `transaction`; never store card data | **High** |
 | D4 | Scoutbook export column spec (`domain/advancement.ts`) | Exact BSA spec must be confirmed | Validate pipe-delimited columns with BSA/Scoutbook (PRD §14 OQ-1) before real submissions | **High** |
 | D5 | Reminders run on-request only (`domain/members/routes.ts`) | Scheduler not wired | Run `computeRegistrationReminders` on a cron (GitHub Actions / scheduler) → deliver via Brevo email first, then push/SMS | **High** |

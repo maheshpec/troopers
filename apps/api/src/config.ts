@@ -17,8 +17,16 @@ const EnvSchema = z.object({
 
   DATABASE_URL: z.string().url().optional(),
 
-  // "token:role,token:role" — dev/skeleton auth only.
+  // "token:role,token:role" — dev/local auth fallback when no JWT is configured.
   API_AUTH_TOKENS: z.string().default(""),
+
+  // Real auth: verify HS256 JWTs (matches Supabase's project JWT secret).
+  // When set, JWT verification takes precedence over the static token map.
+  AUTH_JWT_SECRET: z.string().min(16).optional(),
+  AUTH_JWT_ISSUER: z.string().optional(),
+  AUTH_JWT_AUDIENCE: z.string().optional(),
+  // Claim that carries the role (e.g. "role" or an app-namespaced claim).
+  AUTH_ROLE_CLAIM: z.string().default("role"),
 
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WINDOW: z.string().default("1 minute"),
@@ -40,6 +48,12 @@ export type AppConfig = Readonly<{
   logLevel: string;
   databaseUrl?: string;
   authTokens: ReadonlyMap<string, string>; // token -> role
+  jwt?: {
+    secret: string;
+    issuer?: string;
+    audience?: string;
+    roleClaim: string;
+  };
   rateLimit: { max: number; window: string };
   trustedProxy: boolean;
   reminders: { registrationLeadDays: number[] };
@@ -71,6 +85,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     logLevel: e.LOG_LEVEL,
     databaseUrl: e.DATABASE_URL,
     authTokens: parseTokens(e.API_AUTH_TOKENS),
+    jwt: e.AUTH_JWT_SECRET
+      ? {
+          secret: e.AUTH_JWT_SECRET,
+          issuer: e.AUTH_JWT_ISSUER,
+          audience: e.AUTH_JWT_AUDIENCE,
+          roleClaim: e.AUTH_ROLE_CLAIM,
+        }
+      : undefined,
     rateLimit: { max: e.RATE_LIMIT_MAX, window: e.RATE_LIMIT_WINDOW },
     trustedProxy: e.TRUSTED_PROXY,
     reminders: { registrationLeadDays: e.REGISTRATION_REMINDER_LEAD_DAYS },
