@@ -40,6 +40,12 @@ const EnvSchema = z.object({
     .default("60,30,14,0")
     .transform((v) => csv(v).map(Number))
     .pipe(z.array(z.number().int().nonnegative()).min(1)),
+
+  // Notifications. With no provider key, the reminders job uses a log channel
+  // (works at $0). Set BREVO_API_KEY to actually send email (HOSTING.md).
+  BREVO_API_KEY: z.string().optional(),
+  REMINDER_FROM_EMAIL: z.string().email().default("troopers@example.org"),
+  REMINDER_DIGEST_EMAIL: z.string().email().optional(),
 });
 
 export type AppConfig = Readonly<{
@@ -57,6 +63,11 @@ export type AppConfig = Readonly<{
   rateLimit: { max: number; window: string };
   trustedProxy: boolean;
   reminders: { registrationLeadDays: number[] };
+  notifications: {
+    brevoApiKey?: string;
+    fromEmail: string;
+    digestEmail?: string;
+  };
   isProd: boolean;
 }>;
 
@@ -96,6 +107,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     rateLimit: { max: e.RATE_LIMIT_MAX, window: e.RATE_LIMIT_WINDOW },
     trustedProxy: e.TRUSTED_PROXY,
     reminders: { registrationLeadDays: e.REGISTRATION_REMINDER_LEAD_DAYS },
+    notifications: {
+      brevoApiKey: e.BREVO_API_KEY,
+      fromEmail: e.REMINDER_FROM_EMAIL,
+      digestEmail: e.REMINDER_DIGEST_EMAIL,
+    },
     isProd: e.NODE_ENV === "production",
   });
 }

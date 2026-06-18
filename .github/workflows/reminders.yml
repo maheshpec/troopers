@@ -1,0 +1,35 @@
+# Scheduled reminders job (D5 / PRD §5.13 FR-N-8). Runs daily so registration
+# renewals (and future reminder types) fire even if no one opens the app.
+#
+# Secrets to set in the repo/environment:
+#   DATABASE_URL          - the production Postgres (Supabase) connection string
+#   REMINDER_DIGEST_EMAIL - where the digest goes (e.g. the Membership Chair)
+#   BREVO_API_KEY         - optional; without it the job logs instead of sending
+name: Reminders
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # 13:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: node dist/jobs/reminders.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REMINDER_DIGEST_EMAIL: ${{ secrets.REMINDER_DIGEST_EMAIL }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          REGISTRATION_REMINDER_LEAD_DAYS: "60,30,14,0"
