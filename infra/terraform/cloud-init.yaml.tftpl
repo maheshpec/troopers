@@ -1,0 +1,7 @@
+#cloud-config
+# Minimal bootstrap: clone the repo and bring up the stack. TLS termination
+# (Caddy/Traefik) is added in front for production — see README.
+package_update: true
+runcmd:
+  - [ git, clone, "${repo_url}", /opt/troopers ]
+  - [ bash, -lc, "cd /opt/troopers && docker compose -f infra/docker/docker-compose.yml up -d --build" ]

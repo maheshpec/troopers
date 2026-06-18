@@ -1,0 +1,23 @@
+# Alertmanager routing. Defaults to a no-op webhook receiver; wire a real
+# destination (email/Slack/PagerDuty) per environment.
+# ponytail: replace the example webhook with the unit's channel. Secrets come
+# from the environment, never committed (12-factor III).
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: default
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+    webhook_configs:
+      - url: "http://localhost:5001/" # placeholder sink
+        send_resolved: true

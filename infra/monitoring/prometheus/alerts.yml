@@ -1,0 +1,42 @@
+groups:
+  - name: troopers-api
+    rules:
+      # Availability: the scrape target is down.
+      - alert: ApiDown
+        expr: up{job="troopers-api"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Troopers API is down"
+          description: "Prometheus cannot scrape the API for >1m."
+
+      # Latency SLO (PRD NFR-3: p95 < 1.5s).
+      - alert: ApiHighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "API p95 latency above 1.5s SLO"
+          description: "p95 request latency has exceeded the 1.5s target for 10m."
+
+      # Error budget: 5xx rate.
+      - alert: ApiHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "API 5xx error rate above 5%"
+          description: "More than 5% of requests are failing with 5xx for 5m."
+
+      # Abuse signal: sustained 429s may indicate an attack or a misbehaving client.
+      - alert: ApiRateLimitSpike
+        expr: sum(rate(http_requests_total{status="429"}[5m])) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Sustained rate-limiting (429s)"
+          description: "The API is rate-limiting >1 req/s for 10m."

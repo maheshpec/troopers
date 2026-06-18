@@ -1,0 +1,63 @@
+# Local full stack: API + Postgres + the observability trio
+# (Prometheus scrape, Grafana dashboards, Alertmanager alerting).
+# Usage: docker compose -f infra/docker/docker-compose.yml up --build
+name: troopers
+
+services:
+  api:
+    build:
+      context: ../../apps/api
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgres://troopers:troopers@db:5432/troopers
+      API_AUTH_TOKENS: dev-admin:admin,dev-leader:leader,dev-parent:parent
+      RATE_LIMIT_MAX: "100"
+      FLAG_REGISTRATION_REMINDERS: "true"
+    ports: ["3000:3000"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: troopers
+      POSTGRES_PASSWORD: troopers
+      POSTGRES_DB: troopers
+    volumes:
+      - ../../db/migrations:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U troopers"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [api]
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ../monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: ["9093:9093"]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3001:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  pgdata:

@@ -1,0 +1,45 @@
+# Production overlay: adds TLS via Caddy and stops exposing the observability
+# UIs publicly. Use together with the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Secrets (API_AUTH_TOKENS or JWT, DATABASE_URL, STRIPE_*, BREVO_API_KEY) come
+# from the environment / a .env file that is never committed (12-factor III).
+services:
+  api:
+    ports: [] # not exposed directly; Caddy fronts it
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+
+  # Don't publish DB/observability ports on a public host.
+  db:
+    ports: []
+    restart: unless-stopped
+  prometheus:
+    ports: []
+    restart: unless-stopped
+  alertmanager:
+    ports: []
+    restart: unless-stopped
+  grafana:
+    ports: [] # reach it via an SSH tunnel, not the public internet
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../apps/web:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+
+volumes:
+  caddy_data:
+  caddy_config:

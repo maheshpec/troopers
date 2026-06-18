@@ -1,0 +1,18 @@
+{
+  "name": "Troopers — Troop & Pack Manager",
+  "short_name": "Troopers",
+  "description": "Roster, advancement, events, and registration reminders for a Scouts BSA troop and Cub Scout pack.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b3d2e",
+  "theme_color": "#0b3d2e",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: apps/api
+
+jobs:
+  # ---- Fast feedback: types, unit + functional + security + pg integration ----
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: troopers
+          POSTGRES_PASSWORD: troopers
+          POSTGRES_DB: troopers
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U troopers"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://troopers:troopers@localhost:5432/troopers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Apply migrations
+        run: |
+          for f in ../../db/migrations/*.sql; do
+            psql "$TEST_DATABASE_URL" -f "$f"
+          done
+      - run: npm run test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: apps/api/coverage
+
+  # ---- OWASP A06: vulnerable dependencies ----
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm audit --omit=dev --audit-level=high
+
+  # ---- Build the container image ----
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t troopers-api:ci .
+
+  # ---- Performance smoke (k6) against the running stack ----
+  perf:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack
+        run: docker compose -f ../../infra/docker/docker-compose.yml up -d --build
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/healthz && break || sleep 2
+          done
+      - name: k6 smoke
+        uses: grafana/setup-k6-action@v1
+      - run: k6 run ../../tests/performance/k6-smoke.js
+        env:
+          BASE_URL: http://localhost:3000
+          TOKEN: dev-leader
+
+  # ---- DAST / pen test (OWASP ZAP baseline) ----
+  zap:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack
+        run: docker compose -f ../../infra/docker/docker-compose.yml up -d --build
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/healthz && break || sleep 2
+          done
+      - name: ZAP baseline
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "http://localhost:3000"
+          fail_action: false # report findings; don't block the skeleton build
