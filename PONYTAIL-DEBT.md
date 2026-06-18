@@ -4,9 +4,13 @@ Deliberately deferred shortcuts (YAGNI), each with its upgrade path. Per the
 ponytail convention, nothing here cuts validation, error handling, security, or
 accessibility — these are *implementation* deferrals, not corner-cutting.
 
+> **Resolved:** D1 (Postgres persistence) — see `core/pgRepository.ts`; the
+> factory is pg-backed when `DATABASE_URL` is set, in-memory otherwise. Verified
+> by `test/integration/pg.test.ts` (runs in CI against a Postgres service).
+
 | # | Shortcut (where) | Why deferred | Upgrade path | Priority |
 |---|---|---|---|---|
-| D1 | In-memory repositories (`core/resource.ts`, all domains) | Prove the API shape first; no DB creds needed in sandbox | Implement `Repository<T>` over Postgres using `db/migrations/001_init.sql`; flip wiring in `app.ts` | **High** |
+| ~~D1~~ | ~~In-memory repositories~~ | **DONE** | Postgres repository factory wired (`core/pgRepository.ts`); in-memory remains the no-DB fallback | ✅ |
 | D2 | Static dev-token auth (`src/auth.ts`) | Real IdP needs accounts | Verify JWT (Supabase Auth / Better Auth) via `jose`; load positions → permission scopes; add MFA for admin/treasurer | **High** |
 | D3 | Payments return 501 (`domain/money.ts`) | No Stripe credentials | Stripe PaymentIntent + signed webhook → credit a `transaction`; never store card data | **High** |
 | D4 | Scoutbook export column spec (`domain/advancement.ts`) | Exact BSA spec must be confirmed | Validate pipe-delimited columns with BSA/Scoutbook (PRD §14 OQ-1) before real submissions | **High** |

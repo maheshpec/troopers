@@ -36,6 +36,7 @@ export function registerPhotos(
   const repo = registerResource(app, {
     name: "photos",
     schema: PhotoSchema,
+    columns: ["album_id", "storage_key", "tags", "tagged_youth_ids"],
     writeRoles: ["admin", "leader"],
   }) as Repository<Photo>;
 

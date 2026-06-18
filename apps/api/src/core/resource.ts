@@ -67,19 +67,29 @@ export interface ResourceOptions<S extends z.ZodTypeAny> {
   readRoles?: Role[];
   /** Roles allowed to mutate. Defaults to admin + leader. */
   writeRoles?: Role[];
-  /** Optional shared repository (else an in-memory one is created). */
+  /** Postgres table name (defaults to name with dashes -> underscores). */
+  table?: string;
+  /** Writable snake_case columns for the pg-backed repository. */
+  columns?: string[];
+  /** Optional shared repository (else one is resolved from `app.repos`). */
   repository?: Repository<Entity>;
 }
 
 /**
  * Registers REST CRUD for a resource on the given Fastify instance.
  * Returns the repository so feature modules can add custom routes/logic.
+ *
+ * The repository comes from `app.repos` (the factory), so it is Postgres-backed
+ * when DATABASE_URL is set and in-memory otherwise — feature code is identical.
  */
 export function registerResource<S extends z.ZodTypeAny>(
   app: FastifyInstance,
   opts: ResourceOptions<S>,
 ): Repository<Entity> {
-  const repo = opts.repository ?? createInMemoryRepository<Entity>();
+  const table = opts.table ?? opts.name.replace(/-/g, "_");
+  const repo =
+    opts.repository ??
+    app.repos.for({ table, columns: opts.columns ?? [] });
   const read = opts.readRoles ?? ["admin", "leader", "parent", "scout"];
   const write = opts.writeRoles ?? ["admin", "leader"];
   const base = `/api/${opts.name}`;

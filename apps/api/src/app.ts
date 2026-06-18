@@ -8,7 +8,7 @@ import { createMetrics, type Metrics } from "./metrics.js";
 import { createFeatureFlags, type FeatureFlags } from "./featureFlags.js";
 import { authenticate } from "./auth.js";
 import { AppError } from "./errors.js";
-import type { Entity, Repository } from "./core/resource.js";
+import { createRepositoryFactory, type RepositoryFactory } from "./core/pgRepository.js";
 
 import { registerMembers } from "./domain/members/routes.js";
 import type { Member } from "./domain/members/member.js";
@@ -27,6 +27,7 @@ export interface AppDeps {
   logger: Logger;
   metrics: Metrics;
   flags: FeatureFlags;
+  repos: RepositoryFactory;
 }
 
 export async function buildApp(config: AppConfig): Promise<{
@@ -36,7 +37,8 @@ export async function buildApp(config: AppConfig): Promise<{
   const logger = createLogger(config);
   const metrics = createMetrics();
   const flags = createFeatureFlags();
-  const deps: AppDeps = { config, logger, metrics, flags };
+  const repos = createRepositoryFactory(config);
+  const deps: AppDeps = { config, logger, metrics, flags, repos };
 
   const app = Fastify({
     logger: loggerOptions(config),
@@ -45,6 +47,10 @@ export async function buildApp(config: AppConfig): Promise<{
     // Cap body size (defense in depth, OWASP A05 misconfig / DoS).
     bodyLimit: 1_048_576, // 1 MiB
   });
+
+  // Repository factory available to every resource (pg when DATABASE_URL set).
+  app.decorate("repos", repos);
+  app.addHook("onClose", async () => repos.close());
 
   // --- Security headers (OWASP A05) ---
   // Awaited so the plugins' onRoute hooks attach to every route defined below

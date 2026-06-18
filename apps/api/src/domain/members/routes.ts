@@ -18,6 +18,11 @@ export function registerMembers(
   const repo = registerResource(app, {
     name: "members",
     schema: CreateMemberSchema,
+    columns: [
+      "household_id", "first_name", "last_name", "kind", "program",
+      "bsa_member_id", "registration_expires_on", "registration_status",
+      "photo_consent",
+    ],
     // Parents/scouts can read the roster; only admin/leader mutate it.
     readRoles: ["admin", "leader", "parent", "scout"],
     writeRoles: ["admin", "leader"],

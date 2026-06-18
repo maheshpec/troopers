@@ -42,10 +42,19 @@ export function registerEvents(app: FastifyInstance) {
   const events = registerResource(app, {
     name: "events",
     schema: EventSchema,
+    columns: [
+      "title", "type", "location", "starts_at", "ends_at", "fee_cents",
+      "rsvp_deadline",
+    ],
     writeRoles: ["admin", "leader"],
   }) as Repository<EventEntity>;
 
-  const rsvps = new Map<string, Rsvp>();
+  // RSVPs use the repository factory (pg table `rsvps`), upserting on
+  // (event, member) so a member changing their answer overwrites the prior row.
+  const rsvps = app.repos.for<Rsvp>({
+    table: "rsvps",
+    columns: ["event_id", "member_id", "response", "guests"],
+  });
 
   app.post(
     "/api/events/:id/rsvp",
@@ -55,16 +64,14 @@ export function registerEvents(app: FastifyInstance) {
       const event = await events.get(id);
       if (!event) throw badRequest("Unknown event", "unknown_event");
       const body = RsvpSchema.parse(req.body);
-      // One RSVP per (event, member) — upsert keyed deterministically.
-      const key = `${id}:${body.memberId}`;
-      const rsvp: Rsvp = {
-        id: key,
-        createdAt: new Date().toISOString(),
-        eventId: id,
-        ...body,
-      };
-      rsvps.set(key, rsvp);
-      reply.code(201);
+      // One RSVP per (event, member): update the existing answer or create one.
+      const existing = (await rsvps.list()).find(
+        (r) => r.eventId === id && r.memberId === body.memberId,
+      );
+      const rsvp = existing
+        ? await rsvps.update(existing.id, body)
+        : await rsvps.create({ eventId: id, ...body });
+      reply.code(existing ? 200 : 201);
       return { data: rsvp };
     },
   );
@@ -74,7 +81,8 @@ export function registerEvents(app: FastifyInstance) {
     { preHandler: requireRole("admin", "leader") },
     async (req) => {
       const { id } = req.params as { id: string };
-      return { data: [...rsvps.values()].filter((r) => r.eventId === id) };
+      const all = await rsvps.list();
+      return { data: all.filter((r) => r.eventId === id) };
     },
   );
 

@@ -30,6 +30,7 @@ export function registerMoney(app: FastifyInstance) {
   const repo = registerResource(app, {
     name: "transactions",
     schema: TransactionSchema,
+    columns: ["account_id", "amount_cents", "kind", "memo"],
     // Money is sensitive: only treasurer-class roles read/write here.
     readRoles: ["admin", "leader"],
     writeRoles: ["admin", "leader"],

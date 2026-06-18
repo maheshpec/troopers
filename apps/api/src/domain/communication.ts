@@ -48,6 +48,7 @@ export function registerCommunication(app: FastifyInstance) {
         audience: z.enum(["unit", "patrol", "den", "committee"]).default("unit"),
       })
       .strict(),
+    columns: ["title", "body", "audience"],
     writeRoles: ["admin", "leader"],
   });
 

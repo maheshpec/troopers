@@ -64,7 +64,12 @@ export function toScoutbookFile(
 export function registerAdvancement(app: FastifyInstance) {
   const repo = registerResource(app, {
     name: "advancement",
+    table: "advancement_records",
     schema: AdvancementRecordSchema,
+    columns: [
+      "bsa_member_id", "member_name", "advancement_type", "advancement",
+      "date_completed", "approved", "submitted_to_council_on",
+    ],
     writeRoles: ["admin", "leader"],
   }) as Repository<AdvancementRecord>;
 
