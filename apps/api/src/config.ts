@@ -46,6 +46,11 @@ const EnvSchema = z.object({
   BREVO_API_KEY: z.string().optional(),
   REMINDER_FROM_EMAIL: z.string().email().default("troopers@example.org"),
   REMINDER_DIGEST_EMAIL: z.string().email().optional(),
+
+  // Stripe. Checkout needs the secret key; the webhook verifies with the
+  // signing secret. Both absent -> payments return 501 (no card processing).
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export type AppConfig = Readonly<{
@@ -68,6 +73,7 @@ export type AppConfig = Readonly<{
     fromEmail: string;
     digestEmail?: string;
   };
+  stripe: { secretKey?: string; webhookSecret?: string };
   isProd: boolean;
 }>;
 
@@ -111,6 +117,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       brevoApiKey: e.BREVO_API_KEY,
       fromEmail: e.REMINDER_FROM_EMAIL,
       digestEmail: e.REMINDER_DIGEST_EMAIL,
+    },
+    stripe: {
+      secretKey: e.STRIPE_SECRET_KEY,
+      webhookSecret: e.STRIPE_WEBHOOK_SECRET,
     },
     isProd: e.NODE_ENV === "production",
   });

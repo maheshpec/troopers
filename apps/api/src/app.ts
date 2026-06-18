@@ -21,6 +21,8 @@ import { registerPhotos } from "./domain/photos.js";
 import { registerSimpleResources } from "./domain/simpleResources.js";
 import { registerReporting } from "./domain/reporting.js";
 import { registerSync } from "./domain/sync.js";
+import { registerStripeWebhook } from "./domain/payments.js";
+import type { Entity } from "./core/resource.js";
 
 export interface AppDeps {
   config: AppConfig;
@@ -110,13 +112,22 @@ export async function buildApp(config: AppConfig): Promise<{
     return metrics.registry.metrics();
   });
 
+  // App-level transactions ledger, shared by the money routes and the Stripe
+  // webhook (which authenticates by signature, not a bearer token).
+  const transactions = repos.for<Transaction & Entity>({
+    table: "transactions",
+    columns: ["account_id", "amount_cents", "kind", "memo"],
+  });
+  // Stripe webhook lives OUTSIDE the authenticated scope (signature-verified).
+  registerStripeWebhook(app, config, transactions);
+
   // --- Authenticated API surface (everything under /api requires a token) ---
   app.register(async (api) => {
     api.addHook("preHandler", authenticate(config));
 
     const members = registerMembers(api, deps);
     registerAdvancement(api);
-    const transactions = registerMoney(api);
+    registerMoney(api, deps, transactions);
     registerEvents(api);
     registerCommunication(api);
     registerSettings(api);

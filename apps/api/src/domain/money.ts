@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireRole } from "../auth.js";
 import { registerResource, type Entity, type Repository } from "../core/resource.js";
+import type { AppDeps } from "../app.js";
 
 /** PRD §5.7 Money: Scout-account ledger. Amounts in integer cents (no floats). */
 export const TransactionSchema = z
@@ -26,15 +27,20 @@ export function balanceForAccount(
     .reduce((sum, t) => sum + t.amountCents, 0);
 }
 
-export function registerMoney(app: FastifyInstance) {
-  const repo = registerResource(app, {
+export function registerMoney(
+  app: FastifyInstance,
+  deps: AppDeps,
+  repo: Repository<Transaction>,
+) {
+  registerResource(app, {
     name: "transactions",
     schema: TransactionSchema,
-    columns: ["account_id", "amount_cents", "kind", "memo"],
+    // Share the app-level repo so the Stripe webhook credits the same ledger.
+    repository: repo as Repository<Entity>,
     // Money is sensitive: only treasurer-class roles read/write here.
     readRoles: ["admin", "leader"],
     writeRoles: ["admin", "leader"],
-  }) as Repository<Transaction>;
+  });
 
   app.get(
     "/api/accounts/:accountId/balance",
@@ -46,19 +52,48 @@ export function registerMoney(app: FastifyInstance) {
     },
   );
 
-  // ponytail: online payments are stubbed. Upgrade path -> Stripe PaymentIntent
-  // (hosted elements, webhook -> create a credit transaction). No card data
-  // ever touches this service (PRD §5.7 constraint, OWASP A02).
+  const CheckoutSchema = z
+    .object({
+      accountId: z.string().min(1).max(64),
+      amountCents: z.number().int().positive().max(1_000_000),
+      description: z.string().max(200).optional(),
+    })
+    .strict();
+
+  // Creates a Stripe PaymentIntent (hosted elements complete it client-side;
+  // the webhook later credits the ledger). No card data touches this service
+  // (PRD §5.7, OWASP A02). Returns 501 until STRIPE_SECRET_KEY is configured.
   app.post(
     "/api/payments/checkout",
     { preHandler: requireRole("admin", "leader", "parent") },
-    async (_req, reply) => {
-      reply.code(501);
-      return {
-        error: "not_implemented",
-        message:
-          "Stripe checkout pending credentials. See PONYTAIL-DEBT.md (payments).",
-      };
+    async (req, reply) => {
+      const body = CheckoutSchema.parse(req.body);
+      if (!deps.config.stripe.secretKey) {
+        reply.code(501);
+        return { error: "not_implemented", message: "STRIPE_SECRET_KEY not configured" };
+      }
+      // Stripe REST API (no SDK dependency). accountId travels in metadata so
+      // the webhook can credit the right Scout account.
+      const res = await fetch("https://api.stripe.com/v1/payment_intents", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${deps.config.stripe.secretKey}`,
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          amount: String(body.amountCents),
+          currency: "usd",
+          "metadata[accountId]": body.accountId,
+          ...(body.description ? { description: body.description } : {}),
+        }),
+      });
+      if (!res.ok) {
+        req.log.error({ status: res.status }, "stripe checkout failed");
+        reply.code(502);
+        return { error: "payment_provider_error", message: "Could not create payment" };
+      }
+      const intent = (await res.json()) as { client_secret?: string };
+      return { clientSecret: intent.client_secret };
     },
   );
 
