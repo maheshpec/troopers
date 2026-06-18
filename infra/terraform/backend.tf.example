@@ -1,0 +1,16 @@
+# Remote Terraform state (D10). Copy to backend.tf and fill in before more than
+# one person runs terraform, so state isn't trapped on one laptop. Cloudflare R2
+# is S3-compatible and free-tier friendly (HOSTING.md).
+#
+# terraform {
+#   backend "s3" {
+#     bucket                      = "troopers-tfstate"
+#     key                         = "prod/terraform.tfstate"
+#     region                      = "auto"
+#     endpoint                    = "https://<accountid>.r2.cloudflarestorage.com"
+#     skip_credentials_validation = true
+#     skip_region_validation      = true
+#     skip_metadata_api_check     = true
+#     # Credentials via AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (R2 token).
+#   }
+# }

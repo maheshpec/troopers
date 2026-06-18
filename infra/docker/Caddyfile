@@ -1,0 +1,19 @@
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt). Terminates TLS in
+# front of the API so nothing is served over plain HTTP in production (OWASP
+# A02). Set DOMAIN in the environment. Grafana/Prometheus are NOT exposed here.
+{$DOMAIN} {
+	encode gzip
+	# API
+	reverse_proxy /api/* api:3000
+	reverse_proxy /healthz api:3000
+	reverse_proxy /readyz api:3000
+	# Static PWA shell (served by any static file server / Cloudflare Pages in
+	# the managed stack; here Caddy serves it directly if mounted).
+	root * /srv/web
+	file_server
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}

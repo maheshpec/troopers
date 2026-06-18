@@ -39,20 +39,7 @@ export function registerSimpleResources(app: FastifyInstance) {
     writeRoles: ["admin"],
   });
 
-  // §5.8 Activity logs (service hours, nights camped, miles)
-  registerResource(app, {
-    name: "activity-logs",
-    schema: z
-      .object({
-        memberId: z.string().uuid(),
-        kind: z.enum(["service_hours", "nights_camped", "miles_hiked"]),
-        quantity: z.number().nonnegative(),
-        occurredOn: z.string().date(),
-        eventId: z.string().uuid().optional(),
-      })
-      .strict(),
-    columns: ["member_id", "kind", "quantity", "occurred_on", "event_id"],
-  });
+  // §5.8 Activity logs are registered by domain/activity.ts (with a summary).
 
   // §5.9 Documents & forms (medical access is restricted to leaders/admins)
   registerResource(app, {

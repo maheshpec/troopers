@@ -12,21 +12,27 @@ external credentials, and the precise next steps to take it to production.
 
 - **Planning is done**: `PRD.md` (17 feature areas, youth-protection/COPPA
   constraints) and `HOSTING.md` ($0 default stack).
-- **Backend is a working walking skeleton across all 17 areas** (`apps/api`):
-  Fastify 5 + TypeScript, **44 tests passing, ~88% coverage**, typecheck clean.
-  It boots and serves real HTTP (verified: health, RBAC 401/403, CRUD 201,
-  Prometheus metrics).
+- **Backend is a working app across all 17 areas** (`apps/api`): Fastify 5 +
+  TypeScript, **75 tests passing** (unit + functional + security + Postgres
+  integration), typecheck clean. Boots and serves real HTTP.
+- **Persistence is real (D1).** Postgres-backed repositories behind a factory
+  (`core/pgRepository.ts`); pg when `DATABASE_URL` is set, in-memory otherwise.
+  Migrations in `db/migrations/00{1,2,3}_*.sql`. Verified by pg integration tests.
+- **Auth is real (D2).** HS256 JWT verification (`jose`), matching Supabase's
+  signing; static tokens remain only as the no-JWT local fallback.
+- **Payments built (D3).** Signature-verified Stripe webhook credits the ledger;
+  checkout creates a PaymentIntent when keyed. Only a live Stripe account remains.
+- **Reminders run on a schedule (D5).** `src/jobs/reminders.ts` + a daily
+  GitHub Actions cron; Log channel ($0) or Brevo email when keyed.
 - **The "stack" is wired**: 12-factor config, structured logging, Prometheus
   metrics, feature flags, OWASP-aware security, health/readiness, graceful
-  shutdown, Dockerfile, docker-compose with the full observability trio,
-  Grafana dashboard + Prometheus alerts + Alertmanager, Terraform IaC, k6
-  perf tests, OWASP ZAP pen test, and CI running all of it.
-- **PWA shell exists** (`apps/web`): installable, offline-capable, no build
-  step, wired to the API.
-- **Not done / blocked**: deep third-party integrations that need credentials
-  unavailable in the sandbox (Stripe, the live Scoutbook file spec), the
-  Postgres-backed repositories (currently in-memory), real auth (JWT), and the
-  native iOS/Android apps. All tracked in `PONYTAIL-DEBT.md`.
+  shutdown, Dockerfile, docker-compose (+ a TLS prod overlay), Grafana
+  dashboard + Prometheus alerts + Alertmanager, Terraform IaC, k6 perf tests,
+  OWASP ZAP pen test, and CI (now with a Postgres service) running all of it.
+- **PWA shell exists** (`apps/web`): installable, offline-capable, no build step.
+- **Genuinely blocked (need external accounts)**: live Scoutbook file spec (D4),
+  Stripe keys (D3), Brevo key + per-household email routing (D5), Web Push VAPID
+  (D6), native iOS/Android apps (D12). All tracked in `PONYTAIL-DEBT.md`.
 
 > Honest scope note: a *literally complete* production app (live payments,
 > App Store/Play binaries, BSA-validated sync) cannot be finished or verified
@@ -98,23 +104,21 @@ reminder rules, registrations) are CRUD-with-validation-and-RBAC via
 
 ---
 
-## 5. What's STUBBED / BLOCKED (and why)
+## 5. What's still BLOCKED (needs external accounts) and why
 
-See `PONYTAIL-DEBT.md` for the full ledger. The big ones:
+See `PONYTAIL-DEBT.md` for the full ledger. After the D1/D2/D3/D5/D7/D9/D10
+work, only externally-gated items remain:
 
-1. **Persistence is in-memory.** Swap each `createInMemoryRepository` for a
-   Postgres-backed `Repository<T>` (tables already in `db/migrations/001_init.sql`,
-   same interface). Start with members/advancement/transactions.
-2. **Auth is static dev tokens.** Replace `src/auth.ts` token lookup with JWT
-   verification (Supabase Auth or Better Auth) → load positions → derive
-   permission scopes. The `requireRole` guard and `AuthContext` shape stay.
-3. **Payments** (`POST /api/payments/checkout`) returns 501 — needs Stripe keys.
-   Wire PaymentIntent + webhook → credit a `transaction`. No card data in-app.
-4. **Scoutbook file column spec** — approximated; confirm with BSA (PRD §14 OQ-1)
-   before real submissions.
-5. **Web Push** — service worker has the cache logic but no `push` handler
-   (needs VAPID keys; iOS requires installed PWA).
-6. **Native iOS/Android** — not started; PWA covers phones meanwhile.
+1. **Scoutbook file column spec (D4)** — the serializer + "only approved/
+   un-submitted" selection are built and tested; the exact pipe-delimited column
+   order must be confirmed with BSA (PRD §14 OQ-1) before real submissions.
+2. **Stripe account (D3)** — webhook verification + ledger credit + checkout are
+   built; set `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` to go live.
+3. **Brevo key + per-household routing (D5)** — pipeline runs and sends a digest;
+   add `BREVO_API_KEY` and wire household emails for per-parent delivery.
+4. **Web Push (D6)** — needs VAPID keys; iOS requires the PWA be installed.
+5. **RS256/JWKS + MFA (D2)** — needs a live IdP; HS256 path is done.
+6. **Native iOS/Android (D12)** — PWA covers phones meanwhile.
 
 ---
 

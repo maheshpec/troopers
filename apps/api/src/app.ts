@@ -21,6 +21,7 @@ import { registerPhotos } from "./domain/photos.js";
 import { registerSimpleResources } from "./domain/simpleResources.js";
 import { registerReporting } from "./domain/reporting.js";
 import { registerSync } from "./domain/sync.js";
+import { registerActivity } from "./domain/activity.js";
 import { registerStripeWebhook } from "./domain/payments.js";
 import type { Entity } from "./core/resource.js";
 
@@ -137,6 +138,7 @@ export async function buildApp(config: AppConfig): Promise<{
       const all = await members.list();
       return new Set(all.filter((m) => m.photoConsent === true).map((m) => m.id));
     });
+    registerActivity(api);
     registerSimpleResources(api);
     registerSync(api, members);
     registerReporting(api, { members, transactions });

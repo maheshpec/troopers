@@ -45,7 +45,7 @@ shell** (`apps/web`).
 ```bash
 npm ci
 npm run typecheck      # tsc --noEmit
-npm test               # vitest: unit + functional + security (44 tests)
+npm test               # vitest: unit + functional + security + pg integration (75 tests)
 npm run test:coverage  # enforces coverage thresholds
 npm run dev            # tsx watch (local)
 ```

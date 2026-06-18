@@ -16,7 +16,7 @@ sync advancement into Scouting America's official systems.
 ## What's here
 | Path | What |
 |---|---|
-| `apps/api/` | Fastify 5 + TypeScript API — all 17 feature areas, **44 tests, ~88% coverage** |
+| `apps/api/` | Fastify 5 + TypeScript API — all 17 feature areas, **75 tests** (incl. Postgres integration) |
 | `apps/web/` | Installable, offline-capable PWA shell (no build step) |
 | `db/migrations/` | Postgres schema |
 | `infra/docker/` | docker-compose: API + Postgres + Prometheus + Grafana + Alertmanager |
