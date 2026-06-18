@@ -24,6 +24,8 @@ export const CreateMemberSchema = z
     bsaMemberId: z.string().regex(/^\d{1,12}$/).optional(),
     // ISO date (YYYY-MM-DD) the member's registration expires.
     registrationExpiresOn: z.string().date().optional(),
+    // Guardian photo-consent for this youth (COPPA / PRD §9). Default false.
+    photoConsent: z.boolean().optional(),
   })
   .strict();
 

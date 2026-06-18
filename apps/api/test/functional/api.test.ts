@@ -180,6 +180,82 @@ describe("communication youth-protection guard", () => {
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toBe("youth_protection");
   });
+
+  it("persists a compliant message and exposes it in the audit view", async () => {
+    const post = await app.inject({
+      method: "POST",
+      url: "/api/messages",
+      headers: auth("leadertok"),
+      payload: {
+        subject: "Committee sync",
+        body: "Agenda attached",
+        participants: [
+          { id: "a1", kind: "adult" },
+          { id: "a2", kind: "adult" },
+        ],
+      },
+    });
+    expect(post.statusCode).toBe(201);
+    expect(post.json().data.id).toBeTruthy();
+
+    const audit = await app.inject({
+      method: "GET",
+      url: "/api/messages",
+      headers: auth("admintok"),
+    });
+    expect(audit.statusCode).toBe(200);
+    const found = audit.json().data.find((m: { subject: string }) => m.subject === "Committee sync");
+    expect(found).toBeTruthy();
+    expect(found.participants).toHaveLength(2); // round-tripped from JSON
+    expect(found.senderRole).toBe("leader");
+
+    // Youth must not see the audit view (A01).
+    const denied = await app.inject({
+      method: "GET",
+      url: "/api/messages",
+      headers: auth("scouttok"),
+    });
+    expect(denied.statusCode).toBe(403);
+  });
+});
+
+describe("photo consent filter (COPPA)", () => {
+  it("hides photos tagging a youth without consent", async () => {
+    const mk = async (photoConsent: boolean) =>
+      (
+        await app.inject({
+          method: "POST",
+          url: "/api/members",
+          headers: auth("leadertok"),
+          payload: { firstName: "Y", lastName: "S", kind: "youth", program: "troop", photoConsent },
+        })
+      ).json().data.id as string;
+
+    const consented = await mk(true);
+    const notConsented = await mk(false);
+
+    const addPhoto = (taggedYouthIds: string[]) =>
+      app.inject({
+        method: "POST",
+        url: "/api/photos",
+        headers: auth("leadertok"),
+        payload: { albumId: "consent-test", storageKey: `k/${Math.random()}`, taggedYouthIds },
+      });
+    await addPhoto([consented]);
+    await addPhoto([notConsented]);
+    await addPhoto([consented, notConsented]); // mixed -> hidden
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/galleries/consent-test",
+      headers: auth("parenttok"),
+    });
+    expect(res.statusCode).toBe(200);
+    const photos = res.json().data;
+    // Only the all-consented photo is visible.
+    expect(photos).toHaveLength(1);
+    expect(photos[0].taggedYouthIds).toEqual([consented]);
+  });
 });
 
 describe("settings configurable durations", () => {

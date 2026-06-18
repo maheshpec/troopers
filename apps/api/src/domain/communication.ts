@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { badRequest } from "../errors.js";
-import { registerResource } from "../core/resource.js";
+import { requireRole } from "../auth.js";
+import { registerResource, type Entity } from "../core/resource.js";
 
 /**
  * PRD §5.6 Communication. The youth-protection rule (§9) is enforced here as
@@ -52,13 +53,52 @@ export function registerCommunication(app: FastifyInstance) {
     writeRoles: ["admin", "leader"],
   });
 
+  interface MessageRow extends Entity {
+    subject: string;
+    body: string;
+    participants: string;
+    participantCount: number;
+    senderRole?: string;
+  }
+  const messages = app.repos.for<MessageRow>({
+    table: "messages",
+    columns: ["subject", "body", "participants", "participant_count", "sender_role"],
+  });
+
   app.post("/api/messages", async (req, reply) => {
     const msg = MessageSchema.parse(req.body);
     const violation = youthProtectionViolation(msg);
     if (violation) throw badRequest(violation, "youth_protection");
-    // ponytail: persistence + delivery (email/SMS/push) deferred. Upgrade path
-    // -> store thread (retained/auditable per §9) and fan out via providers.
+    // Persist for audit/retention (PRD §9). Participants stored as JSON.
+    const saved = await messages.create({
+      subject: msg.subject,
+      body: msg.body,
+      participants: JSON.stringify(msg.participants),
+      participantCount: msg.participants.length,
+      senderRole: req.auth?.role,
+    });
+    // ponytail: delivery (email/SMS/push) still deferred — fan out via the
+    // NotificationChannel once per-recipient routing exists (D9 remainder).
     reply.code(201);
-    return { data: { accepted: true, participants: msg.participants.length } };
+    return { data: { id: saved.id, accepted: true, participants: msg.participants.length } };
   });
+
+  // Audit view: admins/leaders can review retained threads (§9).
+  app.get(
+    "/api/messages",
+    { preHandler: requireRole("admin", "leader") },
+    async () => {
+      const rows = await messages.list();
+      return {
+        data: rows.map((m) => ({
+          id: m.id,
+          subject: m.subject,
+          participantCount: m.participantCount,
+          senderRole: m.senderRole,
+          createdAt: m.createdAt,
+          participants: JSON.parse(m.participants),
+        })),
+      };
+    },
+  );
 }

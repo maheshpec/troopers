@@ -120,9 +120,12 @@ export async function buildApp(config: AppConfig): Promise<{
     registerEvents(api);
     registerCommunication(api);
     registerSettings(api);
-    // Consent source is stubbed permissive in skeleton; real source = consent flags.
-    // ponytail: wire to guardians' photo-consent records (PRD §9, COPPA).
-    registerPhotos(api, { has: () => true });
+    // Photo consent is sourced from the member's photoConsent flag (COPPA, §9):
+    // a youth tagged in a photo is only visible if their record consents.
+    registerPhotos(api, async () => {
+      const all = await members.list();
+      return new Set(all.filter((m) => m.photoConsent === true).map((m) => m.id));
+    });
     registerSimpleResources(api);
     registerSync(api, members);
     registerReporting(api, { members, transactions });

@@ -16,9 +16,9 @@ accessibility — these are *implementation* deferrals, not corner-cutting.
 | D4 | Scoutbook export column spec (`domain/advancement.ts`) | Exact BSA spec must be confirmed | Validate pipe-delimited columns with BSA/Scoutbook (PRD §14 OQ-1) before real submissions | **High** |
 | D5 | ~~Reminders on-request only~~ → **scheduled job done**; per-parent routing remains | Cron job built (`src/jobs/reminders.ts` + `.github/workflows/reminders.yml`) with a Log/Brevo channel; sends a digest. Only `BREVO_API_KEY` + per-household email routing remain | Medium |
 | D6 | No Web Push handler (`apps/web/sw.js`) | Needs VAPID keys; iOS needs installed PWA | Add `push`/`notificationclick` handlers wired to the reminders engine (PRD §5.13) | Medium |
-| D7 | Photo consent source stubbed permissive (`app.ts` → `registerPhotos`) | Consent records not modeled yet | Back with guardians' photo-consent flags (PRD §9, COPPA) | Medium |
+| ~~D7~~ | ~~Photo consent stubbed~~ | **DONE** | Gallery filter sources the member `photoConsent` flag; tagged-youth visibility enforced server-side (PRD §9) | ✅ |
 | D8 | Simple-resource areas are CRUD-only (`domain/simpleResources.ts`) | Depth not yet needed | Add per-area logic as prioritized (e.g. equipment checkout overdue, role permission derivation) | Medium |
-| D9 | Messages not persisted/delivered (`domain/communication.ts`) | Storage/providers pending | Persist threads (retained/auditable per §9) + fan out via email/SMS/push | Medium |
+| D9 | ~~Messages not persisted~~ → **persistence done**; delivery remains | Threads persisted + admin audit view (`messages` table, migration 003). Fan-out via email/SMS/push still pending | Low |
 | D10 | Terraform: local state, SSH open, no TLS automation (`infra/terraform`) | Skeleton IaC | Remote state (R2/S3); lock `ssh_allowed_cidrs`; add Caddy/Traefik TLS; don't expose Grafana | Medium |
 | D11 | Alertmanager placeholder receiver (`infra/monitoring/alertmanager`) | No channel chosen | Wire email/Slack/PagerDuty via env secrets | Low |
 | D12 | Native iOS/Android apps not started | PWA covers phones meanwhile | Cross-platform (React Native/Flutter) on the same API (PRD §10) | Low |

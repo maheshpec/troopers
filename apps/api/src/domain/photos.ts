@@ -31,7 +31,8 @@ export function visiblePhotos(
 
 export function registerPhotos(
   app: FastifyInstance,
-  consent: { has: (youthId: string) => boolean },
+  /** Returns the set of youth ids whose guardians have granted photo consent. */
+  consentedYouthIds: () => Promise<ReadonlySet<string>>,
 ) {
   const repo = registerResource(app, {
     name: "photos",
@@ -46,9 +47,7 @@ export function registerPhotos(
     async (req) => {
       const { albumId } = req.params as { albumId: string };
       const all = (await repo.list()).filter((p) => p.albumId === albumId);
-      const consented = new Set(
-        all.flatMap((p) => p.taggedYouthIds).filter((id) => consent.has(id)),
-      );
+      const consented = await consentedYouthIds();
       return { data: visiblePhotos(all, consented) };
     },
   );
